@@ -6,11 +6,50 @@ make sure you have transformers, peft and all that installed.
 For example run cmd_windows.bat in your oobabooga WebUi directory and run it from there in venv as it has required libraries. 
 
 
+
+usage: merge_tool.py --model_path MODEL_PATH --output_path OUTPUT_PATH
+                     [--lora_path LORA_PATH]
+                     [--lora_checkpoint LORA_CHECKPOINT]
+                     [--device {cpu,cuda,auto}] [--gpu_memory GPU_MEMORY]
+                     [--cpu_memory CPU_MEMORY] [--safetensors]
+                     [--no_safetensors]
+                     [--dtype {float16,bfloat16,float32}] [-h]
+
+Merge a PEFT LoRA with a base Hugging Face model.
+
+options:
+  --model_path MODEL_PATH
+                        Path to the base Hugging Face model directory.
+  --output_path OUTPUT_PATH
+                        Path to save the merged model.
+  --lora_path LORA_PATH
+                        Path to the PEFT LoRA directory. (Optional, use
+                        'None' or omit to skip LoRA merge)
+  --lora_checkpoint LORA_CHECKPOINT
+                        Name of the LoRA checkpoint subfolder (e.g.,
+                        'checkpoint-1000'). 'Final' or empty means use the
+                        main LoRA path. Default: 'Final'.
+  --device {cpu,cuda,auto}
+                        Device to use ('cpu', 'cuda', 'auto'). 'auto' will
+                        use CUDA if available. Default: 'cpu'.
+  --gpu_memory GPU_MEMORY
+                        Maximum GPU memory (GiB) per device. 0 for no limit.
+                        Default: 0.
+  --cpu_memory CPU_MEMORY
+                        Maximum CPU memory (GiB). 0 for no limit. Default: 0.
+  --safetensors         Save with SafeTensors. (Default)
+  --no_safetensors      Do not save with SafeTensors (use PyTorch .bin
+                        files).
+  --dtype {float16,bfloat16,float32}
+                        Torch dtype for loading the model (float16, bfloat16,
+                        float32). Default: float16.
+  -h, --help            show this help message and exit
+
 How to use it:
 
 Run from your terminal:
 
-Example 1: Merge with LoRA on CPU (default)
+##Example 1: Merge with LoRA on CPU (default)
 
       
 python merge_tool.py \
@@ -19,12 +58,7 @@ python merge_tool.py \
     --output_path "/path/to/your/merged_model_output_cpu"
 
     
-
-IGNORE_WHEN_COPYING_START
-Use code with caution. Bash
-IGNORE_WHEN_COPYING_END
-
-Example 2: Merge with a specific LoRA checkpoint on CPU
+##Example 2: Merge with a specific LoRA checkpoint on CPU
 
       
 python merge_tool.py \
@@ -34,12 +68,7 @@ python merge_tool.py \
     --output_path "/path/to/your/merged_model_checkpoint_output"
 
     
-
-IGNORE_WHEN_COPYING_START
-Use code with caution. Bash
-IGNORE_WHEN_COPYING_END
-
-Example 3: "Merge" (resave) base model only, on CPU
+##Example 3: "Merge" (resave) base model only, on CPU
 
       
 python merge_tool.py \
@@ -48,13 +77,9 @@ python merge_tool.py \
 
     
 
-IGNORE_WHEN_COPYING_START
-Use code with caution. Bash
-IGNORE_WHEN_COPYING_END
-
 (You can also explicitly pass --lora_path None)
 
-Example 4: Merge on CUDA (if available), limit GPU memory to 20GiB, CPU to 30GiB
+##Example 4: Merge on CUDA (if available), limit GPU memory to 20GiB, CPU to 30GiB
 
       
 python merge_tool.py \
@@ -67,11 +92,8 @@ python merge_tool.py \
 
     
 
-IGNORE_WHEN_COPYING_START
-Use code with caution. Bash
-IGNORE_WHEN_COPYING_END
 
-Example 5: Merge using bfloat16 and save as .bin (not safetensors)
+##Example 5: Merge using bfloat16 and save as .bin (not safetensors)
 
       
 python merge_tool.py \
