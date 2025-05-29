@@ -6,6 +6,21 @@ make sure you have transformers, peft and all that installed.
 For example run cmd_windows.bat in your oobabooga WebUi directory and run it from there in venv as it has required libraries. 
 
 
+# Create a virtual environment (e.g., named .venv)
+python -m venv .venv
+
+# Activate it
+# On Windows:
+# .venv\Scripts\activate
+# On macOS/Linux:
+# source .venv/bin/activate
+
+# Then run the pip install command
+pip install torch transformers peft sentencepiece accelerate
+
+# When you're done:
+# deactivate
+
 
 usage: merge_tool.py --model_path MODEL_PATH --output_path OUTPUT_PATH
                      [--lora_path LORA_PATH]
