@@ -15,11 +15,11 @@ Make sure you have the necessary Python libraries installed. If you are using an
     ```
 
 2.  **Activate the virtual environment:**
-    *   **On Windows (Command Prompt or PowerShell):**
+    **On Windows (Command Prompt or PowerShell):**
         ```bash
         .venv\Scripts\activate
         ```
-    *   **On macOS/Linux (bash/zsh):**
+    **On macOS/Linux (bash/zsh):**
         ```bash
         source .venv/bin/activate
         ```
