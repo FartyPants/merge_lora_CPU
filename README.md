@@ -1,26 +1,46 @@
-# merge_lora_CPU
-Simple LORA merging with model on CPU
+# merge_lora_CPU# merge_lora_CPU
+Simple LoRA merging with a base model, primarily designed for CPU but supports CUDA.
 
-make sure you have transformers, peft and all that installed.
+This script allows you to merge a PEFT (Parameter-Efficient Fine-Tuning) LoRA adapter with a base Hugging Face model. It can also be used to simply resave a base model, potentially changing its format (e.g., to SafeTensors) or data type.
 
-For example run cmd_windows.bat in your oobabooga WebUi directory and run it from there in venv as it has required libraries. 
+## Prerequisites
+
+Make sure you have the necessary Python libraries installed. If you are using an environment like Oobabooga's text-generation-webui, these libraries might already be present.
+
+### Setting up a Virtual Environment (Recommended)
+
+1.  **Create a virtual environment** (e.g., named `.venv`):
+    ```bash
+    python -m venv .venv
+    ```
+
+2.  **Activate the virtual environment:**
+    *   **On Windows (Command Prompt or PowerShell):**
+        ```bash
+        .venv\Scripts\activate
+        ```
+    *   **On macOS/Linux (bash/zsh):**
+        ```bash
+        source .venv/bin/activate
+        ```
+
+3.  **Install required libraries:**
+    ```bash
+    pip install torch transformers peft sentencepiece accelerate
+    ```
+    *   **Note on PyTorch for GPU:** If you intend to use a GPU, it's highly recommended to install PyTorch by following the official instructions at [pytorch.org](https://pytorch.org/get-started/locally/) to ensure compatibility with your CUDA version.
+
+4.  **When you're done using the environment, deactivate it:**
+    ```bash
+    deactivate
+    ```
+
+## Usage
+
+The script is run from the command line. You can see all available options by running:
 
 
-# Create a virtual environment (e.g., named .venv)
-python -m venv .venv
-
-# Activate it
-# On Windows:
-# .venv\Scripts\activate
-# On macOS/Linux:
-# source .venv/bin/activate
-
-# Then run the pip install command
-pip install torch transformers peft sentencepiece accelerate
-
-# When you're done:
-# deactivate
-
+python merge_tool.py --help
 
 usage: merge_tool.py --model_path MODEL_PATH --output_path OUTPUT_PATH
                      [--lora_path LORA_PATH]
@@ -73,7 +93,7 @@ python merge_tool.py \
     --output_path "/path/to/your/merged_model_output_cpu"
 
     
-##Example 2: Merge with a specific LoRA checkpoint on CPU
+## Example 2: Merge with a specific LoRA checkpoint on CPU
 
       
 python merge_tool.py \
@@ -83,7 +103,7 @@ python merge_tool.py \
     --output_path "/path/to/your/merged_model_checkpoint_output"
 
     
-##Example 3: "Merge" (resave) base model only, on CPU
+## Example 3: "Merge" (resave) base model only, on CPU
 
       
 python merge_tool.py \
@@ -94,7 +114,7 @@ python merge_tool.py \
 
 (You can also explicitly pass --lora_path None)
 
-##Example 4: Merge on CUDA (if available), limit GPU memory to 20GiB, CPU to 30GiB
+## Example 4: Merge on CUDA (if available), limit GPU memory to 20GiB, CPU to 30GiB
 
       
 python merge_tool.py \
@@ -108,7 +128,7 @@ python merge_tool.py \
     
 
 
-##Example 5: Merge using bfloat16 and save as .bin (not safetensors)
+## Example 5: Merge using bfloat16 and save as .bin (not safetensors)
 
       
 python merge_tool.py \
