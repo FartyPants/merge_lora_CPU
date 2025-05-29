@@ -82,28 +82,28 @@ options:
   -h, --help            show this help message and exit
 
  ```
-##Example 1: Merge with LoRA on CPU (default)
+## Example 1: Merge with LoRA on CPU (default)
 
-      
+```bash      
 python merge_tool.py \
     --model_path "/path/to/your/base_model_hf" \
     --lora_path "/path/to/your/lora_adapter" \
     --output_path "/path/to/your/merged_model_output_cpu"
-
+ ```
     
 ## Example 2: Merge with a specific LoRA checkpoint on CPU
 
-      
+```bash     
 python merge_tool.py \
     --model_path "/path/to/your/base_model_hf" \
     --lora_path "/path/to/your/lora_adapter_parent_folder" \
     --lora_checkpoint "checkpoint-500" \
     --output_path "/path/to/your/merged_model_checkpoint_output"
-
+ ```
     
 ## Example 3: "Merge" (resave) base model only, on CPU
 
-      
+```bash      
 python merge_tool.py \
     --model_path "/path/to/your/base_model_hf" \
     --output_path "/path/to/your/resaved_base_model"
@@ -112,9 +112,11 @@ python merge_tool.py \
 
 (You can also explicitly pass --lora_path None)
 
+ ```
+
 ## Example 4: Merge on CUDA (if available), limit GPU memory to 20GiB, CPU to 30GiB
 
-      
+```bash      
 python merge_tool.py \
     --model_path "/path/to/your/base_model_hf" \
     --lora_path "/path/to/your/lora_adapter" \
@@ -123,12 +125,12 @@ python merge_tool.py \
     --gpu_memory 20 \
     --cpu_memory 30
 
-    
+ ```    
 
 
 ## Example 5: Merge using bfloat16 and save as .bin (not safetensors)
 
-      
+```bash        
 python merge_tool.py \
     --model_path "/path/to/your/base_model_hf" \
     --lora_path "/path/to/your/lora_adapter" \
@@ -136,6 +138,6 @@ python merge_tool.py \
     --dtype bfloat16 \
     --no_safetensors
 
-    
+ ```    
 
 
