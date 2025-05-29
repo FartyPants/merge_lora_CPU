@@ -28,7 +28,6 @@ Make sure you have the necessary Python libraries installed. If you are using an
     ```bash
     pip install torch transformers peft sentencepiece accelerate
     ```
-    *   **Note on PyTorch for GPU:** If you intend to use a GPU, it's highly recommended to install PyTorch by following the official instructions at [pytorch.org](https://pytorch.org/get-started/locally/) to ensure compatibility with your CUDA version.
 
 4.  **When you're done using the environment, deactivate it:**
     ```bash
