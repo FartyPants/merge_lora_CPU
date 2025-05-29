@@ -38,8 +38,10 @@ Make sure you have the necessary Python libraries installed. If you are using an
 
 The script is run from the command line. You can see all available options by running:
 
+```bash
 
 python merge_tool.py --help
+
 
 usage: merge_tool.py --model_path MODEL_PATH --output_path OUTPUT_PATH
                      [--lora_path LORA_PATH]
@@ -79,10 +81,7 @@ options:
                         float32). Default: float16.
   -h, --help            show this help message and exit
 
-How to use it:
-
-Run from your terminal:
-
+ ```
 ##Example 1: Merge with LoRA on CPU (default)
 
       
