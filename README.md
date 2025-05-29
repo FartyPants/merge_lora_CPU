@@ -8,20 +8,6 @@ For example run cmd_windows.bat in your oobabooga WebUi directory and run it fro
 
 How to use it:
 
-    Save the code above as merge_tool.py.
-
-    Make sure you have the necessary libraries installed:
-
-          
-    pip install torch transformers peft accelerate sentencepiece # sentencepiece often needed by tokenizers
-
-        
-
-    IGNORE_WHEN_COPYING_START
-
-Use code with caution. Bash
-IGNORE_WHEN_COPYING_END
-
 Run from your terminal:
 
 Example 1: Merge with LoRA on CPU (default)
