@@ -1,0 +1,20 @@
+# requirements.txt
+
+# Core deep learning framework
+# IMPORTANT: PyTorch installation is platform and CUDA-version specific.
+# It's highly recommended to install PyTorch first by following the
+# instructions on the official PyTorch website: https://pytorch.org/get-started/locally/
+# The lines below are placeholders; pip install -r requirements.txt might
+# install a CPU-only version or a version not matching your CUDA setup
+# if PyTorch isn't already installed correctly.
+torch
+torchvision
+torchaudio
+
+# Hugging Face ecosystem
+transformers>=4.0.0
+peft>=0.5.0       # Parameter-Efficient Fine-Tuning
+accelerate>=0.20.0 # For device_map and efficient loading
+safetensors>=0.3.0 # For .safetensors model format
+
+# No other specific external libraries were explicitly imported in the script.
