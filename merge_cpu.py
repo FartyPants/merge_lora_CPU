@@ -1,10 +1,10 @@
 import argparse
-import os
-import shutil
 from pathlib import Path
 import torch
 from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer # Using Auto classes for more generality
+import json
+
 
 # FPHAM https://github.com/FartyPants/merge_lora_CPU
 
@@ -17,7 +17,9 @@ def process_merge(
     max_gpu_memory_gb: int = 0, # In GB
     max_cpu_memory_gb: int = 0, # In GB
     use_safetensors: bool = True,
-    torch_dtype_str: str = "float16" # "float16", "bfloat16", "float32"
+    torch_dtype_str: str = "float16", # "float16", "bfloat16", "float32"
+    alpha_value: int = 0,  # Default to 0, no direct change
+    alpha_perc: int = 0 # Default to 0, no percentage change
 ):
     print("--- Starting Model Merge Process ---")
 
@@ -70,8 +72,8 @@ def process_merge(
         else:
             print("Device map: Auto (CUDA preferred)")
     else: # auto
-        print(f"Device map: Auto (selected: {device_option})")
-
+        current_device = "CUDA" if torch.cuda.is_available() else "MPS" if torch.backends.mps.is_available() else "CPU"
+        print(f"Device map: Auto (will attempt to use best available: {current_device})")
 
     print(f"Loading base model: {base_model_path}")
     try:
@@ -96,6 +98,52 @@ def process_merge(
             print(f"ERROR: LoRA path does not exist: {peft_model_actual_path}")
             # Option: proceed to save base model only, or exit. Let's exit.
             return
+        
+        adapter_config_path = peft_model_actual_path / "adapter_config.json"
+
+        # --- Alpha value modification logic START ---
+        # Only modify if alpha_value is a positive integer (not 0)
+
+        original_lora_alpha = None
+
+        if alpha_value > 0 or alpha_perc > 0:
+            if adapter_config_path.exists():
+                try:
+                    with open(adapter_config_path, 'r') as f:
+                        adapter_config = json.load(f)
+                    
+                    if "lora_alpha" in adapter_config:
+                        original_lora_alpha = adapter_config["lora_alpha"]
+                        print(f"Original lora_alpha: {original_lora_alpha}")
+
+                        if alpha_value > 0: # --alpha takes precedence
+                            print(f"Using --alpha value ({alpha_value})")
+                            adapter_config["lora_alpha"] = alpha_value
+                            print(f"Temporarily setting lora_alpha to: {alpha_value}")
+                        elif alpha_perc > 0: # If --alpha_perc is set and --alpha is not
+                            percent_alpha = float(alpha_perc) / 100.0
+                            calculated_alpha = int(float(original_lora_alpha) * percent_alpha)
+                            print(f"Calculating lora_alpha using --alpha_perc ({alpha_perc}% of {original_lora_alpha}): {calculated_alpha}")
+                            adapter_config["lora_alpha"] = calculated_alpha
+                        
+                        # --- WRITE BACK ---
+                        with open(adapter_config_path, 'w') as f:
+                            json.dump(adapter_config, f, indent=2)
+                        print(f"Successfully modified lora_alpha in {adapter_config_path}")
+                    else:
+                        print(f"Warning: 'lora_alpha' key not found in {adapter_config_path}. Cannot modify.")
+                        original_lora_alpha = None # Ensure we don't try to restore
+                        adapter_config_path = None
+                except Exception as e:
+                    print(f"Error modifying {adapter_config_path}: {e}")
+                    original_lora_alpha = None # Ensure we don't try to restore
+                    adapter_config_path = None # Prevent restoration attempts
+            else:
+                print(f"Warning: {adapter_config_path} not found. Cannot modify lora_alpha.")
+                original_lora_alpha = None # Ensure we don't try to restore
+                adapter_config_path = None # Prevent restoration attempts
+
+        # --- Alpha value modification logic END ---        
 
         print(f"Loading PEFT LoRA: {peft_model_actual_path}")
         try:
@@ -145,13 +193,39 @@ def process_merge(
             f.write(f"LoRA: {Path(peft_model_path_str).name}\n")
             if lora_checkpoint_name and lora_checkpoint_name.lower() not in ['final', '']:
                 f.write(f"LoRA Checkpoint: {lora_checkpoint_name}\n")
+            else:
+                 f.write(f"LoRA Checkpoint: None \n")
+        else:
+            f.write(f"LoRA: None (Base model saved as is)\n")
+
         f.write(f"Output Format: {'SafeTensors' if use_safetensors else 'PyTorch Binaries'}\n")
         f.write(f"Torch Dtype: {torch_dtype_str}\n")
+        f.write(f"Device Option: {device_option}\n")
 
     print(f"Merge information saved to {merge_info_path}")
+
+    # --- Alpha value restoration logic (guaranteed to run) START ---
+    # Only restore if it was actually changed (original_lora_alpha is not None AND alpha_value > 0)
+    if original_lora_alpha is not None and alpha_value > 0 and adapter_config_path and adapter_config_path.exists():
+        print(f"Restoring lora_alpha in {adapter_config_path} to original value: {original_lora_alpha}")
+        try:
+            with open(adapter_config_path, 'r') as f:
+                adapter_config = json.load(f)
+            adapter_config["lora_alpha"] = original_lora_alpha
+            with open(adapter_config_path, 'w') as f:
+                json.dump(adapter_config, f, indent=2)
+            print("lora_alpha restored successfully.")
+        except Exception as e:
+            print(f"Error restoring lora_alpha in {adapter_config_path}: {e}")
+    # --- Alpha value restoration logic END ---
+
     print("--- Model Merge Process Finished ---")
 
 if __name__ == "__main__":
+    print("FPHAM LoRA Merge Script (Enhanced)")
+    print("Original: https://github.com/FartyPants/merge_lora_CPU")
+    print("********************************************")
+
     parser = argparse.ArgumentParser(description="Merge a PEFT LoRA with a base Hugging Face model.")
     parser.add_argument(
         "--model_path", type=str, required=True, help="Path to the base Hugging Face model directory."
@@ -163,7 +237,7 @@ if __name__ == "__main__":
         "--lora_checkpoint", type=str, default="Final", help="Name of the LoRA checkpoint subfolder (e.g., 'checkpoint-1000'). 'Final' or empty means use the main LoRA path. Default: 'Final'."
     )
     parser.add_argument(
-        "--output_path", type=str, required=True, help="Path to save the merged model."
+        "--output_path", type=str, default=None, help="Path to save the merged model. If not specified and --lora_path is given, defaults to '--lora_path/merge'"
     )
     parser.add_argument(
         "--device", type=str, default="cpu", choices=["cpu", "cuda", "auto"],
@@ -185,27 +259,69 @@ if __name__ == "__main__":
         "--dtype", type=str, default="float16", choices=["float16", "bfloat16", "float32"],
         help="Torch dtype for loading the model (float16, bfloat16, float32). Default: float16."
     )
+    parser.add_argument(
+        "--alpha", type=int, default=0, # Changed default to 0
+        help="Optional: Value to temporarily set lora_alpha in adapter_config.json before merging. The original value will be restored after the merge "
+             "If 0 (default), no change is made. "
+             "if a positive value was used. Only applies if --lora_path is used."
+    )
 
-    print("https://github.com/FartyPants/merge_lora_CPU")
-    print("********************************************")
+    parser.add_argument(
+        "--alpha_perc", type=int, default=0,
+        help="Optional: Calculate lora_alpha as a percentage of the original lora_alpha. The original value will be restored after the merge "
+             "E.g., 50 for 50%. If 0 (default), no change. --alpha takes precedence. "
+             "Only applies if --lora_path is used."
+    )
 
     args = parser.parse_args()
 
+    output_path_str_to_use = args.output_path
+
+    if output_path_str_to_use is None:
+        if args.lora_path and args.lora_path.lower() != "none":
+            # Default to lora_path / "merge" as requested
+            default_output_dir = Path(args.lora_path) / "merge"
+            output_path_str_to_use = str(default_output_dir)
+            print(f"INFO: --output_path not specified. Defaulting to: {output_path_str_to_use}")
+        else:
+            # If output_path is not given AND lora_path is not given (or is "None"),
+            # it's an error because we can't form the default.
+            parser.error(
+                "ERROR: --output_path must be specified if --lora_path is not provided "
+                "(or is 'None'), as the default output path (lora_path/merge) cannot be determined."
+            )
+
     '''
-    python merge_cpu.py \
-    --model_path "/path/to/your/base_model_hf" \
-    --lora_path "/path/to/your/lora_adapter" \
-    --output_path "/path/to/your/merged_model_output_cpu"
+    Example Usage:
+    1. Merge with default output path:
+    python your_script_name.py \
+        --model_path "/path/to/base_model_hf" \
+        --lora_path "/path/to/lora_adapter" \
+        # Output will be /path/to/lora_adapter/merge
+
+    2. Merge with specified output path:
+    python your_script_name.py \
+        --model_path "/path/to/base_model_hf" \
+        --lora_path "/path/to/lora_adapter" \
+        --output_path "/custom/output/dir"
+
+    3. Save base model (no LoRA merge) - output_path is required:
+    python your_script_name.py \
+        --model_path "/path/to/base_model_hf" \
+        --output_path "/path/to/base_model_resaved" \
+        --lora_path "None" 
     '''
 
     process_merge(
         base_model_path_str=args.model_path,
         peft_model_path_str=args.lora_path,
         lora_checkpoint_name=args.lora_checkpoint,
-        output_path_str=args.output_path,
+        output_path_str=output_path_str_to_use, # Use the determined path
         device_option=args.device,
         max_gpu_memory_gb=args.gpu_memory,
         max_cpu_memory_gb=args.cpu_memory,
         use_safetensors=args.safetensors,
-        torch_dtype_str=args.dtype
+        torch_dtype_str=args.dtype,
+        alpha_value=args.alpha,
+        alpha_perc=args.alpha_perc
     )
