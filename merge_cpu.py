@@ -1,9 +1,10 @@
 import argparse
 from pathlib import Path
 import torch
-from peft import PeftModel
+from peft import PeftModel, tuners
 from transformers import AutoModelForCausalLM, AutoTokenizer # Using Auto classes for more generality
 import json
+from safetensors.torch import save_model
 
 
 # FPHAM https://github.com/FartyPants/merge_lora_CPU
@@ -88,6 +89,46 @@ def process_merge(
     except Exception as e:
         print(f"Error loading base model: {e}")
         return
+    
+
+
+    # Use a dictionary to store the short module name and a full path example
+    module_examples = {}
+
+    # Iterate through all named modules in the model
+    for name, module in base_model.named_modules():
+        # We are looking for the linear layers within attention and MLP blocks.
+        if isinstance(module, torch.nn.Linear) and ("attn" in name or "mlp" in name):
+            # The target module name is the last part of the full name string.
+            # e.g., in 'language_model.model.layers.0.self_attn.q_proj', we want 'q_proj'
+            module_type = name.split('.')[-1]
+            
+            # If we haven't seen this module type before, save it with its full path
+            if module_type not in module_examples:
+                module_examples[module_type] = name
+
+    print("\n--- Potential LoRA Target Modules ---")
+    print("Shows the short name (for 'target_modules') and a full path example (for debugging).")
+
+    if not module_examples:
+        print("\nNo potential targetable linear layers found in 'attn' or 'mlp' blocks.")
+        return
+     
+    # Sort by the short module name for consistent, alphabetical output
+    # The f-string formatting `{key:<12}` pads the key to 12 characters for alignment
+    for key in sorted(module_examples.keys()):
+        print(f"- {key:<12} (e.g., {module_examples[key]})")
+    
+    # Extract just the unique module types for the JSON example
+    unique_target_modules = sorted(list(module_examples.keys()))
+
+    #print("\n--- Example `adapter_config.json` ---")
+    #print("You can use this list for the 'target_modules' parameter when training a LoRA.")
+    #print(json.dumps({"target_modules": unique_target_modules}, indent=2))
+    
+    print("\n--- Analysis Complete ---")
+
+
 
     if peft_model_path_str and peft_model_path_str.lower() != "none":
         peft_model_actual_path = Path(peft_model_path_str)
@@ -158,6 +199,27 @@ def process_merge(
             print(f"Error loading PEFT model: {e}")
             return
 
+        print("\n--- Analyzing Injected PEFT Adapter Layers ---")
+        print("This shows the layers that were successfully replaced by PEFT's LoRA modules.")
+        
+        adapted_modules = {}
+        for name, module in lora_model.named_modules():
+            # Check for the specific LoRA layer types from the PEFT library
+            if isinstance(module, tuners.lora.Linear):
+                module_type = name.split('.')[-1]
+                if module_type not in adapted_modules:
+                    adapted_modules[module_type] = name
+        
+        if not adapted_modules:
+            print("WARNING: No PEFT LoRA layers were found injected in the model.")
+        else:
+            print("Found the following adapted modules:")
+            for key in sorted(adapted_modules.keys()):
+                print(f"- {key:<12} (e.g., {adapted_modules[key]})")
+        print("--- Adapter Analysis Complete ---\n")
+ 
+
+
         print("Running merge_and_unload...")
         try:
             base_model = lora_model.merge_and_unload() # Updates base_model in place
@@ -169,13 +231,52 @@ def process_merge(
     else:
         print("No LoRA specified or 'None'. Proceeding to save base model as is.")
 
+     
+    # --- This is the NEW, corrected block ---
     print(f"Saving merged model to {output_path} (safetensors: {use_safetensors})")
     try:
-        # The `base_model` variable now holds the (potentially merged) model
-        base_model.save_pretrained(output_path, safe_serialization=use_safetensors)
+        if use_safetensors:
+            try:
+                # ATTEMPT 1: Try the simple, standard method for saving the WHOLE model.
+                print("Attempting standard save_pretrained with safetensors...")
+                base_model.save_pretrained(output_path, safe_serialization=True)
+                print("Standard save successful.")
+            except RuntimeError as e:
+                print("\nStandard save failed due to tied weights. Using fallback method.")
+                print("Saving config.json...")
+                base_model.config.save_pretrained(output_path)
+                print("Saving model.safetensors...")
+                save_model(base_model, output_path / "model.safetensors", metadata={'format': 'pt'})
+                print("Fallback save for tied weights finished.")
+
+ 
+                # 3. For compatibility, we might need to create an index file.
+                # Seems to only muddy things
+                # This tells transformers how to map the tensors in the file.
+                #index_data = {
+                #    "metadata": {},
+                #    "weight_map": {
+                #        tensor_name: "model.safetensors" 
+                #        for tensor_name in base_model.state_dict().keys()
+                #    }
+                #}
+                #index_file_path = output_path / "model.safetensors.index.json"
+                #with open(index_file_path, "w", encoding="utf-8") as f:
+                #    json.dump(index_data, f, indent=2)
+
+        else:
+            # If not using safetensors, the old method for .bin files is fine.
+            print("Saving with standard PyTorch .bin files.")
+            base_model.save_pretrained(output_path, safe_serialization=False)
+            
     except Exception as e:
         print(f"Error saving model: {e}")
+        # It's helpful to print the full traceback for debugging
+        import traceback
+        traceback.print_exc()
         return
+
+    
 
     print("Saving tokenizer...")
     try:
@@ -184,6 +285,10 @@ def process_merge(
     except Exception as e:
         print(f"Error saving tokenizer: {e}")
         # Continue, as model might have saved
+
+    actual_vocab_size = len(tokenizer)
+    print(f"The ACTUAL vocabulary size is: {actual_vocab_size}")
+    
 
     # Create a _merge.txt file for reference
     merge_info_path = output_path / "_merge_info.txt"
