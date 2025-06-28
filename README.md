@@ -1,4 +1,7 @@
-# merge_lora_CPU# merge_lora_CPU
+# merge_lora_CPU
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/Q5Q5MOB4M)
+
 Simple LoRA merging with a base model, primarily designed for CPU but supports CUDA.
 
 This script allows you to merge a PEFT (Parameter-Efficient Fine-Tuning) LoRA adapter with a base Hugging Face model. It can also be used to simply resave a base model, potentially changing its format (e.g., to SafeTensors) or data type.
