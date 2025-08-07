@@ -6,6 +6,12 @@ Simple LoRA merging with a base model, primarily designed for CPU but supports C
 
 This script allows you to merge a PEFT (Parameter-Efficient Fine-Tuning) LoRA adapter with a base Hugging Face model. It can also be used to simply resave a base model, potentially changing its format (e.g., to SafeTensors) or data type.
 
+## It is also featured in my book "The Cranky Man's Guide to LoRA & QLoRA" 
+
+<img width="200" height="320" alt="The Cranky Man's Guide to LoRA & QLoRA" src="https://github.com/user-attachments/assets/afdbaae1-54a6-421f-a52c-ce6ea4477514" />
+
+Find it on [Amazon](https://www.amazon.com/dp/B0FLBTR2FS), [Apple Books](https://books.apple.com/us/book/the-cranky-mans-guide-to-lora-and-qlora/id6749593842), [Kobo](https://www.kobo.com/ca/en/ebook/the-cranky-man-s-guide-to-lora-and-qlora), [Barnes & Noble](https://www.barnesandnoble.com/w/the-cranky-mans-guide-to-lora-and-qlora-f-p-ham/1148001179)
+
 ## Prerequisites
 
 Make sure you have the necessary Python libraries installed. If you are using an environment like Oobabooga's text-generation-webui, these libraries might already be present.
